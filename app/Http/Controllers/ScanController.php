@@ -1,0 +1,432 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Scan;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use DOMDocument;     //analyse le code html
+
+
+class ScanController extends Controller
+{
+    private $baseUrl;
+    private $host;
+
+    public function index(){
+        return view('welcome');
+    }
+      
+    public function startScan(Request $request){       //recupere les liens prepare les donnes
+            $url = $request->url;
+            $scheme = parse_url($url, PHP_URL_SCHEME);
+            $host = parse_url($url, PHP_URL_HOST);
+
+            $baseUrl = $scheme . "://" . $host;
+            try {
+            $response = Http::timeout(20)
+              ->withHeaders([
+              'User-Agent' => 'Mozilla/5.0'
+               ])
+               ->get($url);
+
+            if (!$response->successful()) {
+
+             return response()->json([
+               'success' => false,
+               'status' => $response->status(),
+               'body' => substr($response->body(), 0, 300)
+             ], 400);
+            }
+
+
+            $dom = new DOMDocument();
+
+            libxml_use_internal_errors(true);
+            $dom->loadHTML($response->body());
+            libxml_clear_errors();
+
+            $links = [];
+
+            foreach ($dom->getElementsByTagName('a') as $link) {
+
+               $href = trim($link->getAttribute('href'));
+
+                $href = strtok($href, '#');
+
+                if (
+                    empty($href) ||
+                    str_starts_with($href, 'mailto:') ||
+                    str_starts_with($href, 'tel:') ||
+                    str_starts_with($href, 'sms:') ||
+                    str_starts_with($href, 'javascript:') ||
+                    str_starts_with($href, 'data:')
+                ) {
+                    continue;
+                }
+
+                if (!str_starts_with($href, 'http')) {
+
+                    if (str_starts_with($href, '/')) {
+
+                        $href = rtrim($baseUrl, '/') . $href;
+
+                    } else {
+
+                        $href = rtrim($baseUrl, '/') . '/' . ltrim($href, '/');
+                    }
+                }
+
+                $href = strtok($href, '#');
+                $href = rtrim($href, '/');
+
+
+                // Ignorer fichiers
+                $extension = strtolower(pathinfo(parse_url($href, PHP_URL_PATH), PATHINFO_EXTENSION));
+
+                $ignoredExtensions = [
+                    'jpg','jpeg','png','gif',
+                    'svg','webp','css',
+                    'js','ico','pdf','zip','mp4'
+                ];
+
+
+                if(in_array($extension,$ignoredExtensions)){
+                    continue;
+                }
+
+
+                $links[] = $href;
+            }
+
+            $links = array_unique($links);
+            $links = array_values($links);  
+            $scan = Scan::create([
+              'website' => $url,
+              'base_url' => $baseUrl,
+              'host' => $host,
+
+              'to_visit' => json_encode($links),
+              'visited' => json_encode([]),
+              'broken_links' => json_encode([]),
+
+              'indexed' => 0,
+              'broken' => 0,
+              'skipped' => 0,
+
+              'finished' => false
+            ]);
+
+           return response()->json([
+             'success' => true,
+             'scan_id' => $scan->id
+           ]);
+
+           } catch (\Exception $e) {
+              return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+              ], 400);
+            }
+    }
+
+    public function scanStep(Request $request){       //verifie statut et incremente comp et sauv 
+       
+         $scan = Scan::find($request->scan_id);
+         if(!$scan){
+           return response()->json([
+             'error'=>'Scan introuvable'
+           ],404);
+        }
+         $toVisit = json_decode($scan->to_visit, true);
+         $visited = json_decode($scan->visited, true);
+         $brokenLinks = json_decode($scan->broken_links, true);
+
+         $indexed = $scan->indexed;
+         $broken = $scan->broken;
+         $skipped = $scan->skipped;
+         $baseUrl = $scan->base_url;
+         $host = $scan->host;
+
+        if (empty($toVisit)) {
+
+            $scan->broken_links = json_encode($brokenLinks);
+            $scan->indexed = $indexed;
+            $scan->broken = $broken;
+            $scan->skipped = $skipped;
+            $scan->finished = true;
+            $scan->save();
+
+            return response()->json([
+               'finished' => true,
+               'progress' => 100,
+               'indexed' => $indexed,
+               'broken' => $broken,
+               'skipped' => $skipped
+            ]);
+        }
+
+         $currentLink = array_shift($toVisit);
+         \Log::info('SCAN URL : ' . $currentLink);
+
+        if (in_array($currentLink, $visited)) {
+             $skipped++;
+
+        } else {
+            $visited[] = $currentLink;
+        try {
+
+            $response = Http::timeout(10)
+                ->connectTimeout(5)
+                ->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0'
+                ])
+                ->get($currentLink);
+
+            $status = $response->status();
+
+} catch (\Exception $e) {
+
+    $status = 0;
+    $response = null;
+}
+        if ($status >= 200 && $status < 400) {
+
+        $indexed++;
+
+        $dom = new DOMDocument();
+
+        libxml_use_internal_errors(true);
+        $dom->loadHTML($response->body());
+        libxml_clear_errors();
+            foreach ($dom->getElementsByTagName('a') as $link) {
+
+                $href = trim($link->getAttribute('href'));
+
+                $href = strtok($href, '#');
+                $href = rtrim($href,'/');
+
+                if (
+                    empty($href) ||
+                    str_starts_with($href, 'mailto:') ||
+                    str_starts_with($href, 'tel:') ||
+                    str_starts_with($href, 'sms:') ||
+                    str_starts_with($href, 'javascript:') ||
+                    str_starts_with($href, 'data:')
+                ) {
+                    continue;
+                }
+
+                if (!str_starts_with($href, 'http')) {
+
+                    if (str_starts_with($href, '/')) {
+
+                        $href = rtrim($baseUrl, '/') . $href;
+
+                    } else {
+
+                        $href = rtrim($baseUrl, '/') . '/' . ltrim($href, '/');
+                    }
+                }   
+
+                if (str_starts_with($href, 'http')) {
+
+                    $newHost = parse_url($href, PHP_URL_HOST);
+
+                    if (
+                        $newHost == $host &&
+                        !in_array($href, $visited) &&
+                        !in_array($href, $toVisit)
+                    ) {
+
+                        $toVisit[] = $href;
+                    }
+                }
+            }
+
+        } else {
+
+            if ($status >= 400 || $status == 0) {
+                if(!in_array($currentLink, array_column($brokenLinks,'url'))){
+                    $broken++;
+                    $brokenLinks[] = [
+                        'url'=>$currentLink,
+                        'status'=>$status
+                    ];
+                }
+            }
+        }
+    }
+
+           $totalProcessed = count($visited);
+            $totalRemaining = count($toVisit);
+
+            if (($totalProcessed + $totalRemaining) > 0) {
+                $progress = intval(
+                    ($totalProcessed / ($totalProcessed + $totalRemaining)) * 100
+                );
+            } else {
+                $progress = 100;
+            }
+
+         $scan->to_visit = json_encode($toVisit);
+         $scan->visited = json_encode($visited);
+         $scan->broken_links = json_encode($brokenLinks);
+         $scan->indexed = $indexed;
+         $scan->broken = $broken;
+         $scan->skipped = $skipped;
+         $scan->save();
+
+         return response()->json([
+              'finished' => false,
+              'progress' => $progress,
+              'indexed' => $indexed,
+              'broken' => $broken,
+              'skipped' => $skipped
+        ]);
+
+   
+    }
+   
+
+   public function checkUrl(Request $request)
+{
+    $url = $request->url;
+
+    $baseUrl = parse_url($url, PHP_URL_SCHEME) . '://' .
+               parse_url($url, PHP_URL_HOST);
+
+    $indexed = 0;
+    $broken = 0;
+    $skipped = 0;           
+    try {
+
+        $response = Http::timeout(20)
+            ->withHeaders([
+                'User-Agent' => 'Mozilla/5.0'
+            ])
+            ->get($url);
+
+        if (!$response->successful()) {
+           return response()->json([
+                'success' => false
+            ]);
+        }
+
+        $dom = new DOMDocument();
+
+        libxml_use_internal_errors(true);
+        $dom->loadHTML($response->body());
+        libxml_clear_errors();
+
+        foreach ($dom->getElementsByTagName('a') as $link) {
+
+            $href = trim($link->getAttribute('href'));
+
+            if (empty($href)) {
+                continue;
+            }
+
+            if (
+                str_starts_with($href, '#') ||
+                str_starts_with($href, 'mailto:') ||
+                str_starts_with($href, 'javascript:')
+            ) {
+                $skipped++;
+                continue;
+            }
+
+            if (!str_starts_with($href, 'http')) {
+                $href = rtrim($baseUrl, '/') . '/' . ltrim($href, '/');
+            }
+
+            try {
+
+                $linkResponse = Http::timeout(10)
+                    ->withHeaders([
+                        'User-Agent' => 'Mozilla/5.0'
+                    ])
+                    ->head($href);
+
+                // Si HEAD n'est pas autorisé, on utilise GET
+                if ($linkResponse->status() == 405) {
+
+                    $linkResponse = Http::timeout(10)
+                        ->withHeaders([
+                            'User-Agent' => 'Mozilla/5.0'
+                        ])
+                        ->get($href);
+                }
+
+                $status = $linkResponse->status();
+
+                $indexed++;
+
+                if ($status >= 400) {
+                    $broken++;
+                }
+
+            } catch (\Exception $e) {
+
+                $indexed++;
+                $broken++;
+            }
+        }
+        return response()->json([
+            'success' => true,
+            'indexed' => $indexed,
+            'broken' => $broken,
+            'skipped' => $skipped
+]);
+
+    } catch (\Exception $e) {
+
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+
+}
+    
+    
+    public function result(Request $request){         
+         $scan = Scan::findOrFail($request->scan_id);   //recup donn dl base
+         return view('result', [
+          'scan' => $scan,
+          'website' => $scan->website,
+          'indexed' => $scan->indexed,
+           'skipped' => $scan->skipped,
+          'brokenLinks' => json_decode($scan->broken_links, true)  ?? [],
+          'updated' => $scan->updated_at
+
+        ]);
+    }
+    
+
+
+    public function exportCsv(){
+        $scan = Scan::findOrFail(request('scan_id'));
+        $brokenLinks = json_decode($scan->broken_links, true);
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="broken-links.csv"',
+        ];
+        $callback = function() use ($brokenLinks){
+            $file = fopen('php://output' , 'w');
+            fputcsv($file, ['URL' , 'Status']);
+            foreach($brokenLinks as $link){
+              fputcsv($file, [
+                $link['url'],
+                $link['status']
+              ]);
+            }
+            fclose($file);
+        };
+        return response()->stream($callback, 200, $headers);
+
+    }
+    
+
+}
