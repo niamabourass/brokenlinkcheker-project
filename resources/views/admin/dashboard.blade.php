@@ -14,6 +14,7 @@
 
         <link rel="icon" href="favicon.ico">
         <link rel="stylesheet" href="{{ asset('admin_old/style.css') }}">
+        <script src="https://cdn.tailwindcss.com"></script>
     </head>
     <body
         x-data="{ page: 'ecommerce', 'loaded': true, 'darkMode': false, 'stickyMenu': false, 'sidebarToggle': false, 'scrollTop': false }"
