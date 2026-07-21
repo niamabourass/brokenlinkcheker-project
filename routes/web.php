@@ -17,12 +17,14 @@ Route::post('/admin/login', [AdminAuthController::class, 'login']);
 
 Route::middleware('auth:admin')->group(function () {
 
-    Route::get('/admin', [AdminController::class, 'index']);
+    Route::get('/admin', [AdminController::class, 'index'])
+    ->name('admin.dashboard');
 
     Route::get('/admin/scan/{id}', [AdminController::class, 'show'])
         ->name('admin.scan.details');
 
-    Route::post('/admin/logout', [AdminAuthController::class, 'logout']);
+    Route::post('/admin/logout', [AdminAuthController::class, 'logout'])
+    ->name('admin.logout');
 });
 
 
