@@ -491,11 +491,13 @@
 
                                         <p class="text-center text-muted mb-4">
 
-                                            Scanning
+    <span class="spinner-border spinner-border-sm text-secondary me-2"></span>
 
-                                            <strong id="websiteName"></strong>
+    Scanning
 
-                                        </p>
+    <strong id="websiteName"></strong>
+
+</p>
 
                                         <div class="progress rounded-pill mb-5"
 
