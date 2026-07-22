@@ -2,40 +2,51 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class AdminAuthController extends Controller
 {
+    /**
+     * Affiche le formulaire de connexion.
+     */
     public function loginForm()
     {
         return view('admin.login');
     }
 
-    public function login(Request $request)
+    /**
+     * Connexion de l'administrateur.
+     */
+    public function login(LoginRequest $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required'
-        ]);
+        try {
 
-        if (Auth::guard('admin')->attempt($credentials)) {
+            $request->authenticate();
 
-            $request->session()->regenerate();
+        } catch (ValidationException $e) {
 
-            return redirect('/admin');
+            return back()
+                ->withErrors($e->errors())
+                ->onlyInput('email');
         }
 
-        return back()->withErrors([
-            'email' => 'Email ou mot de passe incorrect'
-        ]);
+        $request->session()->regenerate();
+
+        return redirect()->route('admin.dashboard');
     }
 
+    /**
+     * Déconnexion.
+     */
     public function logout(Request $request)
     {
         Auth::guard('admin')->logout();
 
         $request->session()->invalidate();
+
         $request->session()->regenerateToken();
 
         return redirect('/');
