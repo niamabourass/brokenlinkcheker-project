@@ -140,6 +140,54 @@
                       <canvas id="brokenLinksChart"></canvas>
                   </div>
               </div>
+               <br></br>
+               
+               <div class="chart-card" style="margin-bottom:30px;">
+                    <div class="chart-card-header">
+                        <h3 class="chart-card-title">
+                            Export Center
+                        </h3>
+
+                        <p class="chart-card-subtitle">
+                            Download scan reports in CSV or PDF format.
+                        </p>
+                    </div>
+
+                    <div style="padding:30px; display:flex; gap:20px;">
+
+                        <a href="{{ route('admin.export.csv') }}"
+                        style="flex:1;
+                                text-align:center;
+                                text-decoration:none;
+                                background:#16a34a;
+                                color:white;
+                                padding:18px;
+                                border-radius:12px;
+                                font-weight:600;
+                                transition:0.3s;">
+
+                            📄 Export CSV
+
+                        </a>
+
+                        <a href="{{ route('admin.export.pdf') }}"
+                        style="flex:1;
+                                text-align:center;
+                                text-decoration:none;
+                                background:#2563eb;
+                                color:white;
+                                padding:18px;
+                                border-radius:12px;
+                                font-weight:600;
+                                transition:0.3s;">
+
+                            📕 Export PDF
+
+                        </a>
+
+                    </div>
+
+                </div>
 
               <!-- Table -->
               <div class="dashboard-table-container" style="margin-top:30px;">

@@ -130,93 +130,100 @@
                     </div>
                 </div>
 
-                <div class="chart-card" style="margin-top:30px;">
+                <form method="POST" action="{{ route('admin.settings.update') }}">
+    @csrf
 
-                  <div class="chart-card-header">
-                      <h3 class="chart-card-title">
-                          System Information
-                      </h3>
+    <div class="chart-card" style="margin-top:30px;">
 
-                      <p class="chart-card-subtitle">
-                          Overview of your Broken Link Checker application.
-                      </p>
-                  </div>
+        <div class="chart-card-header">
+            <h3 class="chart-card-title">
+                👤 Report Information
+            </h3>
 
-                    <div style="padding:30px;">
-                      
-                      <table style="width:100%;border-collapse:collapse;">
+            <p class="chart-card-subtitle">
+                Configure the administrator information displayed in exported reports.
+            </p>
+        </div>
 
-                          <tr style="border-bottom:1px solid #e5e7eb;">
-                              <td style="padding:15px;font-weight:600;">Application</td>
-                              <td style="padding:15px;">Broken Link Checker</td>
-                          </tr>
+        <div style="padding:30px;max-width:700px;">
 
-                          <tr style="border-bottom:1px solid #e5e7eb;">
-                              <td style="padding:15px;font-weight:600;">Framework</td>
-                              <td style="padding:15px;">Laravel 13</td>
-                          </tr>
+            @if(session('success'))
+                <div style="background:#dcfce7;
+                            color:#15803d;
+                            padding:12px;
+                            border-radius:8px;
+                            margin-bottom:25px;">
+                    {{ session('success') }}
+                </div>
+            @endif
 
-                          <tr style="border-bottom:1px solid #e5e7eb;">
-                              <td style="padding:15px;font-weight:600;">PHP Version</td>
-                              <td style="padding:15px;">{{ phpversion() }}</td>
-                          </tr>
+            <label style="display:block;
+              font-weight:600;
+              margin-bottom:10px;">
+                Administrator Name
+            </label>
 
-                          <tr style="border-bottom:1px solid #e5e7eb;">
-                              <td style="padding:15px;font-weight:600;">Database</td>
-                              <td style="padding:15px;">MySQL</td>
-                          </tr>
+            <input
+                type="text"
+                name="admin_name"
+                value="{{ old('admin_name', $settings->admin_name) }}"
+                placeholder="John Doe"
+                style="width:100%;
+                    padding:12px;
+                    border:1px solid #d1d5db;
+                    border-radius:10px;
+                    margin-bottom:25px;">
 
-                          <tr style="border-bottom:1px solid #e5e7eb;">
-                              <td style="padding:15px;font-weight:600;">Total Scans</td>
-                              <td style="padding:15px;">{{ $totalScans }}</td>
-                          </tr>
+            <label style="display:block;
+                          font-weight:600;
+                          margin-bottom:10px;">
+                Administrator Email
+            </label>
 
-                          <tr style="border-bottom:1px solid #e5e7eb;">
-                              <td style="padding:15px;font-weight:600;">Indexed Links</td>
-                              <td style="padding:15px;">{{ $totalIndexedLinks }}</td>
-                          </tr>
+            <input
+                type="email"
+                name="admin_email"
+                value="{{ old('admin_email', $settings->admin_email) }}"
+                placeholder="john@example.com"
+                style="width:100%;
+                       padding:12px;
+                       border:1px solid #d1d5db;
+                       border-radius:10px;
+                       margin-bottom:25px;">
 
-                          <tr style="border-bottom:1px solid #e5e7eb;">
-                              <td style="padding:15px;font-weight:600;">Broken Links</td>
-                              <td style="padding:15px;">{{ $totalBrokenLinks }}</td>
-                          </tr>
+            <label style="display:flex;
+                          align-items:center;
+                          gap:10px;
+                          margin-bottom:30px;">
 
-                          <tr style="border-bottom:1px solid #e5e7eb;">
-                              <td style="padding:15px;font-weight:600;">Last Scan</td>
-                              <td style="padding:15px;">
-                                  {{ $lastScan ? $lastScan->created_at->format('d/m/Y H:i') : 'No scan available' }}
-                              </td>
-                          </tr>
+                <input
+                    type="checkbox"
+                    name="generate_reports"
+                    {{ $settings->generate_reports ? 'checked' : '' }}>
 
-                          <tr>
-                              <td style="padding:15px;font-weight:600;">System Status</td>
-                              <td style="padding:15px;">
-                                  <span style="background:#dcfce7;color:#15803d;padding:6px 12px;border-radius:20px;font-weight:600;">
-                                      Running
-                                  </span>
-                              </td>
-                          </tr>
+                     Include administrator information in exported reports
 
-                      </table>
+            </label>
 
-                      <div style="margin-top:30px;padding:20px;background:#eff6ff;border-left:5px solid #2563eb;border-radius:10px;">
+            <button
+                type="submit"
+                style="background:#2563eb;
+                       color:white;
+                       padding:12px 30px;
+                       border:none;
+                       border-radius:10px;
+                       cursor:pointer;
+                       font-weight:600;">
 
-                          <h3 style="margin-bottom:15px;color:#2563eb;">
-                              About the Application
-                          </h3>
+                Save Settings
 
-                          <p style="line-height:1.8;color:#555;">
-                              Broken Link Checker is a Laravel web application designed to analyze websites,
-                              detect broken links, monitor indexed pages, and generate detailed reports.
-                              The dashboard provides real-time statistics that are automatically updated
-                              after each scan.
-                          </p>
+            </button>
 
-                      </div>
+        </div>
 
-                    </div>
+    </div>
 
-              </div>
+</form>
             </div>
         </main>
     </div>

@@ -142,8 +142,17 @@
             </table> 
           </div>
             <div class="text-center mt-4">
-              <a href="/export-csv?scan_id={{ $scan->id }}" class="btn btn-success">                Exporter en CSV
-              </a>
+                <a href="/export-csv?scan_id={{ $scan->id }}"
+                  class="btn btn-success me-2">
+                    📄 Exporter en CSV
+                </a>
+                <button
+                    class="btn btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#sendReportModal">
+
+                    📧 Send Report
+                </button>
             </div>
           </div> 
         </div> 
@@ -159,6 +168,76 @@
           </a> 
         </div>  
       </div>
-    </body>
+
+        @if(session('success'))
+            <div class="alert alert-success">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-danger">
+                {{ session('error') }}
+            </div>
+        @endif
+
+      <!-- Modal Send Report -->
+
+      <div class="modal fade" id="sendReportModal" tabindex="-1">
+          <div class="modal-dialog">
+              <div class="modal-content">
+                  <form method="POST" action="{{ route('send.report') }}">
+                      @csrf
+
+                      <input type="hidden"
+                            name="scan_id"
+                            value="{{ $scan->id }}">
+
+                      <div class="modal-header">
+
+                          <h5 class="modal-title">
+                              Send Scan Report
+                          </h5>
+                          <button
+                              type="button"
+                              class="btn-close"
+                              data-bs-dismiss="modal">
+                          </button>
+
+                      </div>
+
+                      <div class="modal-body">
+                          <div class="mb-3">
+                              <label>Your Name</label>
+                              <input
+                                  type="text"
+                                  name="name"
+                                  class="form-control"
+                                  required>
+                          </div>
+
+                          <div class="mb-3">
+                              <label>Email Address</label>
+                              <input
+                                  type="email"
+                                  name="email"
+                                  class="form-control"
+                                  required>
+                          </div>
+                      </div>
+
+                      <div class="modal-footer">
+                          <button
+                              type="submit"
+                              class="btn btn-primary">
+                              Send
+                          </button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      </div>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 </html>    
 

@@ -6,6 +6,8 @@ use App\Models\Scan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use DOMDocument;     //analyse le code html
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ScanReportMail;
 
 
 class ScanController extends Controller
@@ -25,10 +27,16 @@ class ScanController extends Controller
             $baseUrl = $scheme . "://" . $host;
             try {
             $response = Http::timeout(20)
-              ->withHeaders([
-              'User-Agent' => 'Mozilla/5.0'
-               ])
-               ->get($url);
+                ->withoutVerifying()
+                ->withOptions([
+                    'allow_redirects' => true,
+                ])
+                ->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language' => 'en-US,en;q=0.9',
+                ])
+                ->get($url);
 
             if (!$response->successful()) {
 
@@ -95,7 +103,14 @@ class ScanController extends Controller
                     continue;
                 }
 
-
+                $newHost = parse_url($href, PHP_URL_HOST);
+                if (
+                    str_replace('www.', '', strtolower($newHost))
+                    !=
+                    str_replace('www.', '', strtolower($host))
+                ) {
+                    continue;
+                }
                 $links[] = $href;
             }
 
@@ -176,72 +191,85 @@ class ScanController extends Controller
             $visited[] = $currentLink;
         try {
 
-            $response = Http::timeout(10)
-                ->connectTimeout(5)
+            $response = Http::timeout(30)
+                ->connectTimeout(10)
+                ->withoutVerifying()
+                ->withOptions([
+                    'allow_redirects' => true,
+                ])
                 ->withHeaders([
-                    'User-Agent' => 'Mozilla/5.0'
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language' => 'en-US,en;q=0.9',
                 ])
                 ->get($currentLink);
 
             $status = $response->status();
 
-} catch (\Exception $e) {
+        } catch (\Exception $e) {
 
-    $status = 0;
-    $response = null;
-}
+           \Log::error('SCAN ERROR [' . $currentLink . '] : ' . $e->getMessage());
+
+            $status = 0;
+            $response = null;
+        }
+
         if ($status >= 200 && $status < 400) {
+            $indexed++;
+            if (!empty($response->body())) {
 
-        $indexed++;
+                $dom = new DOMDocument();
 
-        $dom = new DOMDocument();
+                libxml_use_internal_errors(true);
+                $dom->loadHTML($response->body());
+                libxml_clear_errors();
 
-        libxml_use_internal_errors(true);
-        $dom->loadHTML($response->body());
-        libxml_clear_errors();
-            foreach ($dom->getElementsByTagName('a') as $link) {
+                foreach ($dom->getElementsByTagName('a') as $link) {
 
-                $href = trim($link->getAttribute('href'));
+                    $href = trim($link->getAttribute('href'));
 
-                $href = strtok($href, '#');
-                $href = rtrim($href,'/');
-
-                if (
-                    empty($href) ||
-                    str_starts_with($href, 'mailto:') ||
-                    str_starts_with($href, 'tel:') ||
-                    str_starts_with($href, 'sms:') ||
-                    str_starts_with($href, 'javascript:') ||
-                    str_starts_with($href, 'data:')
-                ) {
-                    continue;
-                }
-
-                if (!str_starts_with($href, 'http')) {
-
-                    if (str_starts_with($href, '/')) {
-
-                        $href = rtrim($baseUrl, '/') . $href;
-
-                    } else {
-
-                        $href = rtrim($baseUrl, '/') . '/' . ltrim($href, '/');
-                    }
-                }   
-
-                if (str_starts_with($href, 'http')) {
-
-                    $newHost = parse_url($href, PHP_URL_HOST);
+                    $href = strtok($href, '#');
+                    $href = rtrim($href,'/');
 
                     if (
-                        $newHost == $host &&
-                        !in_array($href, $visited) &&
-                        !in_array($href, $toVisit)
+                        empty($href) ||
+                        str_starts_with($href, 'mailto:') ||
+                        str_starts_with($href, 'tel:') ||
+                        str_starts_with($href, 'sms:') ||
+                        str_starts_with($href, 'javascript:') ||
+                        str_starts_with($href, 'data:')
                     ) {
-
-                        $toVisit[] = $href;
+                        continue;
                     }
-                }
+
+                    if (!str_starts_with($href, 'http')) {
+
+                        if (str_starts_with($href, '/')) {
+
+                            $href = rtrim($baseUrl, '/') . $href;
+
+                        } else {
+
+                            $href = rtrim($baseUrl, '/') . '/' . ltrim($href, '/');
+                        }
+                    }   
+
+                    if (str_starts_with($href, 'http')) {
+
+                        $newHost = parse_url($href, PHP_URL_HOST);
+
+                        $cleanHost = str_replace('www.', '', strtolower($host));
+                        $cleanNewHost = str_replace('www.', '', strtolower($newHost));
+
+                        if (
+                            $cleanNewHost == $cleanHost &&
+                            !in_array($href, $visited) &&
+                            !in_array($href, $toVisit)
+                        ) {
+                            $toVisit[] = $href;
+                        }
+                    }
+                }    
             }
 
         } else {
@@ -303,7 +331,9 @@ class ScanController extends Controller
 
         $response = Http::timeout(20)
             ->withHeaders([
-                'User-Agent' => 'Mozilla/5.0'
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language' => 'en-US,en;q=0.9',
             ])
             ->get($url);
 
@@ -343,6 +373,10 @@ class ScanController extends Controller
             try {
 
                 $linkResponse = Http::timeout(10)
+                    ->withoutVerifying()
+                    ->withOptions([
+                        'allow_redirects' => true,
+                    ])
                     ->withHeaders([
                         'User-Agent' => 'Mozilla/5.0'
                     ])
@@ -351,7 +385,11 @@ class ScanController extends Controller
                 // Si HEAD n'est pas autorisé, on utilise GET
                 if ($linkResponse->status() == 405) {
 
-                    $linkResponse = Http::timeout(10)
+                   $linkResponse = Http::timeout(10)
+                        ->withoutVerifying()
+                        ->withOptions([
+                            'allow_redirects' => true,
+                        ])
                         ->withHeaders([
                             'User-Agent' => 'Mozilla/5.0'
                         ])
@@ -427,6 +465,34 @@ class ScanController extends Controller
         return response()->stream($callback, 200, $headers);
 
     }
+
     
+    public function sendReport(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email',
+            'scan_id' => 'required|exists:scans,id',
+        ]);
+
+        try {
+            $scan = Scan::findOrFail($request->scan_id);
+ 
+            Mail::to($request->email)
+                ->send(new ScanReportMail($scan, $request->name));
+
+            return back()->with(
+                'success',
+                'Report sent successfully to ' . $request->email
+            );
+
+        } catch (\Exception $e) {
+            return back()->with(
+                'error',
+                $e->getMessage()
+            );
+        }
+    }
+        
 
 }

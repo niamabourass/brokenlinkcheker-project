@@ -19,6 +19,9 @@ Route::get('/export-csv', [ScanController::class, 'exportCsv']);
 
 Route::post('/check-url-statut', [ScanController::class,'checkUrl']);
 
+Route::post('/send-report', [ScanController::class, 'sendReport'])
+    ->name('send.report');
+
 
 
 
@@ -66,9 +69,20 @@ Route::get('/admin/reports', [AdminController::class, 'reports'])
 Route::get('/admin/settings', [AdminController::class, 'settings'])
     ->name('admin.settings');
 
+Route::post('/admin/settings', [AdminController::class, 'updateSettings'])
+    ->name('admin.settings.update');
+
 
 Route::get('/admin/new-scan', [AdminController::class, 'newScan'])
     ->name('admin.new-scan');
+
+
+
+Route::get('/admin/export/csv', [AdminController::class, 'exportCsv'])
+    ->name('admin.export.csv');
+
+Route::get('/admin/export/pdf', [AdminController::class, 'exportPdf'])
+    ->name('admin.export.pdf');
 
 
 
