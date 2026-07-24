@@ -7,7 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use DOMDocument;     //analyse le code html
 use App\Mail\ScanReportMail;
-use Resend\Resend;
+use Illuminate\Support\Facades\Mail;
+
 
 
 class ScanController extends Controller
@@ -478,21 +479,8 @@ class ScanController extends Controller
         try {
             $scan = Scan::findOrFail($request->scan_id);
  
-            $resend = Resend::client(env('RESEND_API_KEY'));
-
-            $html = view('emails.scan-report', [
-                'scan' => $scan,
-                'name' => $request->name
-            ])->render();
-
-            $resend->emails->send([
-                'from' => 'Broken Link Checker <onboarding@resend.dev>',
-                'to' => [
-                    $request->email
-                ],
-                'subject' => 'Your Scan Report',
-                'html' => $html,
-            ]);
+            Mail::to($request->email)
+              ->send(new ScanReportMail($scan, $request->name));
 
             return back()->with(
                 'success',
