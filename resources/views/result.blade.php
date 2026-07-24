@@ -163,9 +163,9 @@
         @endif  
         <br>
         <div class="text-center mt-4">
-          <a href="/" class="btn btn-primary btn-lg rounded-pill px-4">
-             Nouvelle analyse 
-          </a> 
+          <a href="{{ route('admin.new-scan') }}" class="btn btn-primary btn-lg rounded-pill px-4">
+              Nouvelle analyse
+          </a>
         </div>  
       </div>
 
