@@ -107,7 +107,7 @@
 
                 const formData = new FormData(form);
 
-                let response = await fetch("/start-scan",{
+                let response = await fetch("/admin/start-scan",{
                     method:"POST",
                     body:formData,
                     headers:{
@@ -128,7 +128,7 @@
 
                 while(true){
 
-                    response = await fetch("/scan-step",{
+                    response = await fetch("/admin/scan-step",{
                         method:"POST",
                         body:JSON.stringify({
                             scan_id: scanId
@@ -153,7 +153,7 @@
                         progressBar.style.width = "100%";
                         progressBar.textContent = "100%";
 
-                        window.location = "/result?scan_id=" + scanId;
+                        window.location = "/admin/result?scan_id=" + scanId;
                         break;
                     }
 

@@ -5,21 +5,21 @@ use App\Http\Controllers\ScanController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UserScanController;
 
 
-Route::get('/', [ScanController::class, 'index']);
+Route::get('/', [UserScanController::class, 'index']);
 
+Route::post('/start-scan', [UserScanController::class, 'startScan']);
+Route::post('/scan-step', [UserScanController::class, 'scanStep']);
 
-Route::post('/start-scan', [ScanController::class, 'startScan']);
-Route::post('/scan-step', [ScanController::class, 'scanStep']);
+Route::get('/result', [UserScanController::class, 'result']);
 
-Route::get('/result', [ScanController::class, 'result']);
+Route::get('/export-csv', [UserScanController::class, 'exportCsv']);
 
-Route::get('/export-csv', [ScanController::class, 'exportCsv']);
+Route::post('/check-url-statut', [UserScanController::class,'checkUrl']);
 
-Route::post('/check-url-statut', [ScanController::class,'checkUrl']);
-
-Route::post('/send-report', [ScanController::class, 'sendReport'])
+Route::post('/send-report', [UserScanController::class, 'sendReport'])
     ->name('send.report');
 
 
@@ -39,16 +39,18 @@ Route::middleware('auth:admin')->group(function () {
     Route::get('/admin', [AdminController::class, 'index'])
         ->name('admin.dashboard');
 
+    
+    Route::post('/admin/start-scan', [ScanController::class, 'startScan']);
+    Route::post('/admin/scan-step', [ScanController::class, 'scanStep']);
+    Route::get('/admin/result', [ScanController::class, 'result']);
 
     Route::get('/admin/scan/{id}', [AdminController::class, 'show'])
         ->name('admin.scan.details');
-
 
     Route::post('/admin/logout', [AdminAuthController::class, 'logout'])
         ->name('admin.logout');
 
 });
-
 
 Route::get('/admin/scans/{id}', [AdminController::class,'show'])
     ->name('admin.show');

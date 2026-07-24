@@ -2,7 +2,7 @@
 
 namespace App\Mail;
 
-use App\Models\Scan;
+
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
@@ -15,7 +15,7 @@ class ScanReportMail extends Mailable
     public $scan;
     public $name;
 
-    public function __construct(Scan $scan, $name)
+    public function __construct($scan, $name)
     {
         $this->scan = $scan;
         $this->name = $name;

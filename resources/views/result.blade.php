@@ -142,7 +142,7 @@
             </table> 
           </div>
             <div class="text-center mt-4">
-                <a href="/export-csv?scan_id={{ $scan->id }}"
+                <a href="{{ url('/export-csv') }}"
                   class="btn btn-success me-2">
                     📄 Exporter en CSV
                 </a>
@@ -188,10 +188,6 @@
               <div class="modal-content">
                   <form method="POST" action="{{ route('send.report') }}">
                       @csrf
-
-                      <input type="hidden"
-                            name="scan_id"
-                            value="{{ $scan->id }}">
 
                       <div class="modal-header">
 
