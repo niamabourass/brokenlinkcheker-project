@@ -142,7 +142,7 @@
             </table> 
           </div>
             <div class="text-center mt-4">
-                <a href="{{ url('/export-csv') }}"
+                <a href="{{ route('admin.export.csv') }}"
                   class="btn btn-success me-2">
                     📄 Exporter en CSV
                 </a>
