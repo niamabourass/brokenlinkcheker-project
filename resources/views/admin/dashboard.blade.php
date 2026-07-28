@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
   </head>
   <body>
     <div class="dashboard-container">
@@ -270,58 +272,43 @@
                     <thead>
                         <tr>
                             <th>Website</th>
-                            <th>Indexed</th>
-                            <th>Broken</th>
-                            <th>Health</th>
-                            <th>Date</th>
+                            <th>Last Scan</th>
+                            <th>Total Scans</th>
+                            <th>History</th>
                         </tr>
                     </thead>
 
                     <tbody>
-                    @forelse($recentScans as $scan)
-                        <tr>
-                            <td>
-                                {{ $scan->website }}
-                            </td>
-                            <td>
-                                {{ $scan->indexed }}
-                            </td>
-                            <td>
-                                {{ $scan->broken }}
-                            </td>
-                            <td>
-                                @php
-                                    $health = ($scan->indexed + $scan->broken) > 0
-                                        ? round(($scan->indexed / ($scan->indexed + $scan->broken)) * 100)
-                                        : 0;
-                                @endphp
+                    @forelse($websiteHistory as $site)
+                    <tr>
+                        <td>
+                            {{ $site->website }}
+                        </td>
 
-                                @if($health >= 90)
-                                    <span class="status-badge success">
-                                        {{ $health }}%
-                                    </span>
-                                @elseif($health >= 70)
-                                    <span class="status-badge warning">
-                                        {{ $health }}%
-                                    </span>
-                                @else
-                                    <span class="status-badge danger">
-                                        {{ $health }}%
-                                    </span>
-                                @endif
+                        <td>
+                            {{ \Carbon\Carbon::parse($site->last_scan)->format('d/m/Y H:i') }}
+                        </td>
 
-                            </td>
+                        <td>
+                            <span class="status-badge success">
+                                {{ $site->total_scans }}
+                            </span>
+                        </td>
 
-                            <td>
-                                {{ $scan->created_at->format('d/m/Y H:i') }}
-                            </td>
-                        </tr>
+                        <td>
+                            <a href="{{ route('admin.website.history', $site->last_scan_id) }}"
+                            class="btn btn-sm btn-primary">
+                                📈 View
+                            </a>
+                        </td>
+                    </tr>
                     @empty
-                        <tr>
-                            <td colspan="5" style="text-align:center;">
-                                No scans available.
-                            </td>
-                        </tr>
+
+                    <tr>
+                        <td colspan="4" style="text-align:center;">
+                        No scans available.
+                        </td>
+                    </tr>
                     @endforelse
                     </tbody>
                 </table>
@@ -329,13 +316,66 @@
         </div>
       </main>
     </div>
+    <!-- Website History Modal -->
+    <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="historyModalLabel">
+                        Website History
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <canvas id="brokenLinksChart"></canvas>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
      <script>
       window.scanChartData = @json($scanChartData);
       window.httpErrors = @json($httpErrors);
     </script>
 
-<script src="{{ asset('js/dashboard.js') }}"></script>
     <script src="{{ asset('js/dashboard.js') }}"></script>
+     
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const modal = new bootstrap.Modal(
+            document.getElementById('historyModal')
+        );
+
+        const title = document.getElementById('historyModalLabel');
+
+        document.querySelectorAll('.history-btn').forEach(button => {
+
+            button.addEventListener('click', function () {
+
+                const website = this.dataset.website;
+
+                title.innerHTML = "📈 History - " + website;
+
+                modal.show();
+
+            });
+
+        });
+
+    });
+    </script>
   </body>
 </html>

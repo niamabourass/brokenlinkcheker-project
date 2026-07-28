@@ -87,7 +87,9 @@ Route::get('/admin/export/pdf', [AdminController::class, 'exportPdf'])
     ->name('admin.export.pdf');
 
 
-
+Route::get('/admin/website-history/{id}',
+    [AdminController::class, 'websiteHistory'])
+    ->name('admin.website.history');
 /*
 |--------------------------------------------------------------------------
 | Breeze routes

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use App\Models\Setting;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
 {
@@ -27,9 +28,22 @@ class AdminController extends Controller
             $totalLinks = $totalIndexedLinks + $totalBrokenLinks;
             $healthScore = $successRate;
             $totalSites = Scan::distinct('website')->count('website');
+
             $recentScans = Scan::latest()
                 ->take(10)
                 ->get();
+
+
+            $websiteHistory = Scan::select(
+                'website',
+                DB::raw('COUNT(*) as total_scans'),
+                DB::raw('MAX(id) as last_scan_id'),
+                DB::raw('MAX(created_at) as last_scan')
+            )
+            ->groupBy('website')
+            ->orderByDesc('last_scan')
+            ->get();
+            
 
 
             $lastScan = Scan::latest()->first();
@@ -90,7 +104,8 @@ class AdminController extends Controller
                 'successRate',
                 'healthScore',
                 'totalSites',
-                'recentScans'
+                'recentScans',
+                'websiteHistory'
             ));
         }
 
@@ -256,6 +271,35 @@ public function updateSettings(Request $request)
         ]);
 
         return $pdf->download('all_scans_report.pdf');
+    }
+
+    public function websiteHistory($id)
+    {
+        $scan = Scan::findOrFail($id);
+
+        $history = Scan::where('website', $scan->website)
+            ->orderBy('created_at')
+            ->get();
+
+        $chartData = $history
+            ->groupBy(function ($scan) {
+                return $scan->created_at->format('d/m');
+            })
+            ->map(function ($day) {
+                return [
+                    'date' => $day->first()->created_at->format('d/m'),
+                    'broken' => $day->sum('broken'),
+                    'indexed' => $day->sum('indexed'),
+                    'scans' => $day->count(),
+                ];
+            })
+            ->values();
+
+        return view('admin.website-history', [
+            'website' => $scan->website,
+            'history' => $history,
+            'chartData' => $chartData,
+        ]);
     }
 }
 
