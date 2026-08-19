@@ -130,8 +130,8 @@
     @endif
 
 
-    <a href="/admin" class="inline-flex items-center gap-2 mt-6 rounded-xl bg-blue-600 px-5 py-3 font-medium text-white transition hover:bg-blue-700">
-        Retour Dashboard
+    <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center gap-2 mt-6 rounded-xl bg-blue-600 px-5 py-3 font-medium text-white transition hover:bg-blue-700">
+            Retour Dashboard
     </a>
 
 </div>

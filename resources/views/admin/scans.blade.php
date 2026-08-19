@@ -191,15 +191,13 @@
                     <table class="dashboard-table">
 
                         <thead>
-
-                        <tr>
-                            <th>Website</th>
-                            <th>Indexed</th>
-                            <th>Broken</th>
-                            <th>Date</th>
-                            <th>Action</th>
-                        </tr>
-
+                            <tr>
+                                <th>Website</th>
+                                <th>Indexed</th>
+                                <th>Broken</th>
+                                <th>Date</th>
+                                <th>Action</th>
+                            </tr>
                         </thead>
 
                         <tbody>
@@ -213,7 +211,6 @@
                                 </td>
 
                                 <td>
-
                                     <span style="
                                         background:#dbeafe;
                                         color:#2563eb;
@@ -222,13 +219,11 @@
                                         font-weight:600;">
                                         {{ $scan->indexed }}
                                     </span>
-
                                 </td>
 
                                 <td>
 
                                     @if($scan->broken>0)
-
                                         <span style="
                                             background:#fee2e2;
                                             color:#dc2626;
@@ -239,7 +234,6 @@
                                         </span>
 
                                     @else
-
                                         <span style="
                                             background:#dcfce7;
                                             color:#16a34a;
@@ -248,7 +242,6 @@
                                             font-weight:600;">
                                             0
                                         </span>
-
                                     @endif
 
                                 </td>
@@ -259,11 +252,9 @@
 
                                 <td>
 
-                                    <a href="{{ route('admin.scan.details',$scan->id) }}"
+                                    <a href="{{ route('admin.show', $scan->id) }}"
                                        class="btn btn-primary">
-
                                         View Details
-
                                     </a>
 
                                 </td>
@@ -273,11 +264,9 @@
                         @empty
 
                             <tr>
-
                                 <td colspan="5" style="text-align:center;padding:40px;">
                                     No scan history available.
                                 </td>
-
                             </tr>
 
                         @endforelse

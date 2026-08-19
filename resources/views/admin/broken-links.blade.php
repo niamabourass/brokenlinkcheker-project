@@ -167,17 +167,14 @@
                     <table class="dashboard-table">
 
                         <thead>
-
                             <tr>
                                 <th>Website</th>
                                 <th>Broken Links</th>
                                 <th>Action</th>
                             </tr>
-
                         </thead>
 
                         <tbody>
-
                             @forelse($scans as $scan)
 
                             <tr>
@@ -187,7 +184,6 @@
                                 </td>
 
                                 <td>
-
                                     <span style="
                                         background:#fee2e2;
                                         color:#dc2626;
@@ -197,18 +193,13 @@
                                     ">
                                         {{ $scan->broken }}
                                     </span>
-
                                 </td>
 
                                 <td>
-
-                                    <a href="{{ route('admin.scan.details',$scan->id) }}"
+                                    <a href="{{ route('admin.show', $scan->id) }}"
                                        class="btn btn-primary">
-
                                         View Links
-
                                     </a>
-
                                 </td>
 
                             </tr>

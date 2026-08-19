@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Scan;
+use App\Models\UserScan;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -29,4 +31,15 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function scans()
+    {
+        return $this->hasMany(Scan::class);
+    }
+
+    public function userScans()
+    {
+        return $this->hasMany(UserScan::class);
+    }
 }
+

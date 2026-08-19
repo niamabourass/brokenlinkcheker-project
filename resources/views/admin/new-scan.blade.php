@@ -124,9 +124,15 @@
                     return;
                 }
 
-                let scanId = start.scan_id;
+                    if (start.existing === true) {
 
-                while(true){
+                        window.location = "/admin/result?scan_id=" + start.scan_id;
+
+                        return;
+                    }
+                    let scanId = start.scan_id;
+
+                    while(true){
 
                     response = await fetch("/admin/scan-step",{
                         method:"POST",
@@ -149,7 +155,6 @@
                     document.getElementById("skipped").textContent = data.skipped;
 
                     if(data.finished){
-
                         progressBar.style.width = "100%";
                         progressBar.textContent = "100%";
 

@@ -416,7 +416,7 @@ class ScanController extends Controller
             'indexed' => $indexed,
             'broken' => $broken,
             'skipped' => $skipped
-]);
+        ]);
 
     } catch (\Exception $e) {
 
