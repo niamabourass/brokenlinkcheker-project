@@ -634,7 +634,7 @@
                 Check Your Website<br>
                 For Broken Links
             </h1>
-            <p>TEST GIT - Modification temporaire</p>
+
             <p class="mt-4 mb-5">
 
                 Analyze your website automatically,
