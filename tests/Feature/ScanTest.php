@@ -6,19 +6,32 @@ use App\Models\User;
 use App\Models\UserScan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Illuminate\Support\Facades\Http;
 
 class ScanTest extends TestCase
 {
     use RefreshDatabase;
  
     //util non connect ne peut pas scanner
-    public function test_guest_cannot_start_a_scan(): void
+    public function test_guest_can_start_a_scan(): void
     {
+        Http::fake([
+            'https://example.com/*' => Http::response(
+                '<html><body><a href="/test">Test</a></body></html>',
+                200
+            ),
+        ]);
+
         $response = $this->post('/start-scan', [
             'url' => 'https://example.com',
         ]);
 
-        $response->assertRedirect('/login');
+        $response->assertStatus(200);
+
+        $response->assertJson([
+            'success' => true,
+            'existing' => false,
+        ]);
     }
 
     //teste la validation de l URL
