@@ -1132,6 +1132,7 @@
         </div>
     </section>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const isAuthenticated = @json(auth()->check());
    </script>
@@ -1143,18 +1144,6 @@
         const scanButton = document.getElementById("scanButton");
 
         form.addEventListener("submit", async function(e) {
-            // VÉRIFICATION AUTHENTIFICATION
-            if (!isAuthenticated) {
-                e.preventDefault();
-
-                const modal = new bootstrap.Modal(
-                    document.getElementById('loginModal')
-                );
-
-                modal.show();
-
-                return;
-            }
             e.preventDefault();
             // PRÉPARATION DE L'INTERFACE
             progressContainer.style.display = "block";
@@ -1199,9 +1188,9 @@
                     return;
                 }
 
-                // RÉSULTAT DÉJÀ EXISTANT
+                // RÉSULTAT EXISTANT
                 if (start.existing === true) {
-                    // Afficher directement les statistiques
+
                     document.getElementById("indexed").textContent =
                         start.indexed;
 
@@ -1212,48 +1201,34 @@
                         start.skipped;
 
                     progressBar.style.width = "100%";
+                    progressBar.textContent = "100%";
 
-                    progressBar.textContent =
-                        "100%";
+                    scanButton.textContent = "Résultat trouvé";
 
+                    // UTILISATEUR CONNECTÉ
+                    if (isAuthenticated) {
 
-                    scanButton.textContent =
-                        "Résultat trouvé";
+                        window.location = "/result";
 
-                    setTimeout(function() {
+                        return;
+                    }
 
-                        window.location =
-                            "/result?scan_id=" +
-                            start.scan_id;
+                    // UTILISATEUR NON CONNECTÉ
+                    const modalElement =
+                        document.getElementById('loginModal');
 
-                    }, 500);
+                    if (modalElement) {
 
+                        const modal =
+                            new bootstrap.Modal(modalElement);
+
+                        modal.show();
+                    }
 
                     return;
                 }
 
                 let scanId = start.scan_id;
-
-
-                    // RÉSULTAT EXISTANT
-                    if (start.existing) {
-
-                        progressContainer.style.display = "block";
-
-                        progressBar.style.width = "100%";
-                        progressBar.textContent = "100%";
-
-                        document.getElementById("indexed").textContent = start.indexed;
-                        document.getElementById("broken").textContent = start.broken;
-                        document.getElementById("skipped").textContent = start.skipped;
-
-                        scanButton.textContent = "Résultat récupéré";
-
-                        // Aller directement au résultat
-                        window.location = "/result";
-
-                        return;
-                    }
 
                    // NOUVEAU SCAN
                     while(true){
@@ -1277,10 +1252,7 @@
 
                     let data = await response.json();
 
-
-                    // ==========================================
                     // VÉRIFICATION ERREUR
-                    // ==========================================
 
                     if (data.error) {
 
@@ -1294,10 +1266,7 @@
                         break;
                     }
 
-
-                    // ==========================================
                     // MISE À JOUR PROGRESSION
-                    // ==========================================
 
                     progressBar.style.width =
                         data.progress + "%";
@@ -1315,27 +1284,36 @@
                     document.getElementById("skipped").textContent =
                         data.skipped;
 
-
-                    // ==========================================
                     // SCAN TERMINÉ
-                    // ==========================================
 
                     if (data.finished) {
+                        progressBar.style.width = "100%";
+                        progressBar.textContent = "100%";
 
-                        progressBar.style.width =
-                            "100%";
+                        // Si l'utilisateur est déjà connecté
+                        if (isAuthenticated) {
 
-                        progressBar.textContent =
-                            "100%";
+                            window.location = "/result";
 
+                            break;
+                        }
 
-                        window.location =
-                            "/result?scan_id=" +
-                            scanId;
+                        // Mémoriser que l'utilisateur doit revenir au résultat
+                        sessionStorage.setItem('goToResult', 'true');
+
+                        const modalElement =
+                            document.getElementById('loginModal');
+
+                        if (modalElement) {
+
+                            const modal =
+                                new bootstrap.Modal(modalElement);
+
+                            modal.show();
+                        }
 
                         break;
                     }
-
 
                     // Petite pause avant le prochain lien
 
@@ -1386,8 +1364,8 @@
                         </h3>
 
                         <p class="login-text">
-                            Connectez-vous pour lancer une analyse, consulter les résultats
-                            et accéder à toutes les fonctionnalités du Website Link Checker.
+                            Votre analyse est terminée. Connectez-vous pour consulter
+                            les résultats et accéder à toutes les fonctionnalités du Website Link Checker.
                         </p>
 
                         <a href="{{ route('login') }}" class="btn login-btn w-100">
@@ -1406,7 +1384,6 @@
 
             </div>
         </div>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
         <script>
     document.addEventListener('DOMContentLoaded', function () {

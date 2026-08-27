@@ -7,13 +7,13 @@ use App\Http\Controllers\UserScanController;
 
 
 /*
-| User Scanner
+ User Scanner 
 */
 
 Route::get('/', [UserScanController::class, 'index']);
 
-Route::post('/start-scan', [UserScanController::class, 'startScan'])
-    ->middleware('auth');
+Route::post('/start-scan', [UserScanController::class, 'startScan']);
+    
 
 Route::post('/scan-step', [UserScanController::class, 'scanStep']);
 
@@ -43,7 +43,7 @@ Route::post('/send-report', [UserScanController::class, 'sendReport'])
 
 
 /*
-| Admin Authentication
+ Admin Authentication 
 */
 
 Route::get('/admin/login', [AdminAuthController::class, 'loginForm'])
@@ -52,11 +52,17 @@ Route::get('/admin/login', [AdminAuthController::class, 'loginForm'])
 Route::post('/admin/login', [AdminAuthController::class, 'login'])
     ->name('admin.login.post');
 
+Route::get('/login-for-result', function () {
 
+    session(['login_redirect' => 'result']);
+
+    return redirect()->route('login');
+
+})->name('login.for.result');
 
 /*
-| Admin Dashboard
-*/
+ Admin Dashboard
+*/ 
 
 Route::middleware('auth:admin')
     ->prefix('admin')
@@ -126,7 +132,7 @@ Route::middleware('auth:admin')
 
 
 /*
-| Breeze routes
+ Breeze routes
 */
 
 require __DIR__.'/auth.php';

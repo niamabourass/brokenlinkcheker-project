@@ -28,7 +28,11 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-       return redirect()->intended('/');
+        if ($request->session()->has('user_scan_id')) {
+            return redirect()->route('result');
+        }
+
+        return redirect()->intended('/');
     }
 
     public function destroy(Request $request): RedirectResponse

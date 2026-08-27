@@ -12,8 +12,9 @@ return new class extends Migration
             $table->id();
 
             $table->foreignId('user_id')
-                ->constrained('users')
-                ->onDelete('cascade');
+            ->nullable()
+            ->constrained('users')
+            ->onDelete('cascade');
 
             $table->string('website');
             $table->string('base_url');

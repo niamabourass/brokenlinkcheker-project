@@ -278,7 +278,7 @@ public function startScan(Request $request)
 
         $scan = UserScan::create([
 
-            'user_id' => auth()->id(),
+            'user_id' => auth()->check() ? auth()->id() : null,
 
             'website' => $url,
 
@@ -400,10 +400,7 @@ public function startScan(Request $request)
             ]);
         }
 
-
-        // ==========================================
         // PRENDRE LE PROCHAIN LIEN
-        // ==========================================
 
         $currentLink = array_shift($toVisit);
 
@@ -717,6 +714,11 @@ public function startScan(Request $request)
 
         if (!$scan) {
             return redirect('/')->with('error', 'Scan introuvable.');
+        }
+
+        if ($scan->user_id === null && auth()->check()) {
+            $scan->user_id = auth()->id();
+            $scan->save();
         }
 
         // Vérifier que le scan appartient bien à l'utilisateur connecté
