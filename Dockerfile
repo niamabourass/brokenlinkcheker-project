@@ -36,7 +36,7 @@ RUN chmod -R 775 storage bootstrap/cache
 
 RUN php artisan package:discover --ansi
 
-RUN php artisan config:cache
+
 RUN php artisan route:cache
 RUN php artisan view:cache
 
