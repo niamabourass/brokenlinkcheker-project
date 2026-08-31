@@ -23,317 +23,235 @@ class UserScanController extends Controller
     }
       
     
-public function startScan(Request $request)
-{
-    $request->validate([
-        'url' => 'required|url',
-    ]);
-
-    $url = trim($request->url);
-
-    // NORMALISATION DE L'URL
-
-    $scheme = parse_url($url, PHP_URL_SCHEME);
-    $host = parse_url($url, PHP_URL_HOST);
-
-    if (!$scheme || !$host) {
-        return response()->json([
-            'success' => false,
-            'message' => 'URL invalide.'
-        ], 400);
-    }
-
-    $cleanHost = str_replace(
-        'www.',
-        '',
-        strtolower($host)
-    );
-
-    $baseUrl = $scheme . '://' . $host;
-
-    //recherche un scan existant 
-    $existingScan = UserScan::where('finished', true)
-    ->where('updated_at', '>=', now()->subHours(24))
-    ->where(function ($query) use ($cleanHost) {
-
-        $query->whereRaw(
-            "REPLACE(LOWER(host), 'www.', '') = ?",
-            [$cleanHost]
-        );
-
-    })
-    ->latest('updated_at')
-    ->first();
-
-        //si scan existant utililser le resultat
-        if ($existingScan) {
-        
-        $scan = UserScan::create([
-            'user_id' => auth()->id(),
-
-            'website' => $url,
-
-            'base_url' => $existingScan->base_url,
-
-            'host' => $existingScan->host,
-
-            // Aucun nouveau scan nécessaire
-            'to_visit' => [],
-
-            //les résultats du existants
-            'visited' => $existingScan->visited ?? [],
-
-            'broken_links' => $existingScan->broken_links ?? [],
-
-            'indexed' => $existingScan->indexed ?? 0,
-
-            'broken' => $existingScan->broken ?? 0,
-
-            'skipped' => $existingScan->skipped ?? 0,
-
-            // Le scan est déjà terminé
-            'finished' => true,
-            'created_at' => $existingScan->created_at,
-            'updated_at' => $existingScan->updated_at,
+    public function startScan(Request $request)
+    {
+        $request->validate([
+            'url' => 'required|url',
         ]);
 
-        // Sauvegarder le nouveau scan dans la session
-        session([
-            'user_scan_id' => $scan->id
-        ]);
+        $url = trim($request->url);
 
-        return response()->json([
+        // NORMALISATION DE L'URL
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        $host = parse_url($url, PHP_URL_HOST);
 
-            'success' => true,
-
-            'existing' => true,
-
-            'scan_id' => $scan->id,
-
-            'indexed' => $scan->indexed,
-
-            'broken' => $scan->broken,
-
-            'skipped' => $scan->skipped,
-
-            'message' => 'Résultat existant récupéré depuis la base de données.'
-        ]);
-    }
-
-        //si aucun scan existant lancer un nouveau scan
-  
-    try {
-
-        $response = Http::timeout(20)
-            ->withoutVerifying()
-            ->withOptions([
-                'allow_redirects' => true,
-            ])
-            ->withHeaders([
-                'User-Agent' =>
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/138.0.0.0 Safari/537.36',
-
-                'Accept' =>
-                    'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-
-                'Accept-Language' =>
-                    'en-US,en;q=0.9',
-            ])
-            ->get($url);
-
-
-        if (!$response->successful()) {
-
+        if (!$scheme || !$host) {
             return response()->json([
                 'success' => false,
-                'status' => $response->status(),
-                'body' => substr($response->body(), 0, 300)
+                'message' => 'URL invalide.'
             ], 400);
         }
 
-
-        // ==========================================
-        // ANALYSE DE LA PAGE
-        // ==========================================
-
-        $dom = new DOMDocument();
-
-        libxml_use_internal_errors(true);
-
-        $dom->loadHTML($response->body());
-
-        libxml_clear_errors();
-
-
-        $links = [];
-
-
-        foreach ($dom->getElementsByTagName('a') as $link) {
-
-            $href = trim($link->getAttribute('href'));
-
-            $href = strtok($href, '#');
-
-
-            if (
-                empty($href) ||
-                str_starts_with($href, 'mailto:') ||
-                str_starts_with($href, 'tel:') ||
-                str_starts_with($href, 'sms:') ||
-                str_starts_with($href, 'javascript:') ||
-                str_starts_with($href, 'data:')
-            ) {
-                continue;
-            }
-
-
-            // ==========================================
-            // CONVERSION DES URL RELATIVES
-            // ==========================================
-
-            if (!str_starts_with($href, 'http')) {
-
-                if (str_starts_with($href, '/')) {
-
-                    $href = rtrim($baseUrl, '/') . $href;
-
-                } else {
-
-                    $href =
-                        rtrim($baseUrl, '/') .
-                        '/' .
-                        ltrim($href, '/');
-                }
-            }
-
-
-            $href = strtok($href, '#');
-
-            $href = rtrim($href, '/');
-
-
-            // ==========================================
-            // EXTENSIONS IGNORÉES
-            // ==========================================
-
-            $extension = strtolower(
-                pathinfo(
-                    parse_url($href, PHP_URL_PATH),
-                    PATHINFO_EXTENSION
-                )
-            );
-
-
-            $ignoredExtensions = [
-                'jpg',
-                'jpeg',
-                'png',
-                'gif',
-                'svg',
-                'webp',
-                'css',
-                'js',
-                'ico',
-                'pdf',
-                'zip',
-                'mp4'
-            ];
-
-
-            if (in_array($extension, $ignoredExtensions)) {
-                continue;
-            }
-
-
-            // ==========================================
-            // GARDER UNIQUEMENT LE MÊME DOMAINE
-            // ==========================================
-
-            $newHost = parse_url($href, PHP_URL_HOST);
-
-            $cleanNewHost = str_replace(
-                'www.',
-                '',
-                strtolower($newHost)
-            );
-
-
-            if ($cleanNewHost != $cleanHost) {
-                continue;
-            }
-
-
-            $links[] = $href;
-        }
-
-
-        $links = array_values(
-            array_unique($links)
+        $cleanHost = str_replace(
+            'www.',
+            '',
+            strtolower($host)
         );
 
+        $baseUrl = $scheme . '://' . $host;
 
-        // ==========================================
-        // CRÉATION DU SCAN EN BDD
-        // ==========================================
+        //recherche un scan existant 
+        $existingScan = UserScan::where('finished', true)
+        ->where('updated_at', '>=', now()->subHours(24))
+        ->where(function ($query) use ($cleanHost) {
 
-        $scan = UserScan::create([
+            $query->whereRaw(
+                "REPLACE(LOWER(host), 'www.', '') = ?",
+                [$cleanHost]
+            );
+        })
+        ->latest('updated_at')
+        ->first();
 
-            'user_id' => auth()->check() ? auth()->id() : null,
+            //si scan existant utililser le resultat
+            if ($existingScan) {
+            $scan = UserScan::create([
+                'user_id' => auth()->id(),
+                'website' => $url,
+                'base_url' => $existingScan->base_url,
+                'host' => $existingScan->host,
 
-            'website' => $url,
+                // Aucun nouveau scan nécessaire
+                'to_visit' => [],
 
-            'base_url' => $baseUrl,
+                //les résultats du existants
+                'visited' => $existingScan->visited ?? [],
+                'broken_links' => $existingScan->broken_links ?? [],
+                'indexed' => $existingScan->indexed ?? 0,
+                'broken' => $existingScan->broken ?? 0,
+                'skipped' => $existingScan->skipped ?? 0,
 
-            'host' => $host,
+                // Le scan est déjà terminé
+                'finished' => true,
+                'created_at' => $existingScan->created_at,
+                'updated_at' => $existingScan->updated_at,
+            ]);
 
-            'to_visit' => $links,
+            // Sauvegarder le nouveau scan dans la session
+            session([
+                'user_scan_id' => $scan->id
+            ]);
 
-            'visited' => [],
+            return response()->json([
+                'success' => true,
+                'existing' => true,
+                'scan_id' => $scan->id,
+                'indexed' => $scan->indexed,
+                'broken' => $scan->broken,
+                'skipped' => $scan->skipped,
+                'message' => 'Résultat existant récupéré depuis la base de données.'
+            ]);
+        }
 
-            'broken_links' => [],
+            //si aucun scan existant lancer un nouveau scan
+        try {
+            $response = Http::timeout(20)
+                ->withoutVerifying()
+                ->withOptions([
+                    'allow_redirects' => true,
+                ])
+                ->withHeaders([
+                    'User-Agent' =>
+                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/138.0.0.0 Safari/537.36',
 
-            'indexed' => 0,
+                    'Accept' =>
+                        'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
 
-            'broken' => 0,
+                    'Accept-Language' =>
+                        'en-US,en;q=0.9',
+                ])
+                ->get($url);
 
-            'skipped' => 0,
+            if (!$response->successful()) {
+                return response()->json([
+                    'success' => false,
+                    'status' => $response->status(),
+                    'body' => substr($response->body(), 0, 300)
+                ], 400);
+            }
 
-            'finished' => false,
-        ]);
+            // ANALYSE DE LA PAGE
+            $dom = new DOMDocument();
 
+            libxml_use_internal_errors(true);
 
-        // ==========================================
-        // STOCKER L'ID DU SCAN DANS LA SESSION
-        // ==========================================
+            $dom->loadHTML($response->body());
 
-        session([
-            'user_scan_id' => $scan->id
-        ]);
+            libxml_clear_errors();
 
+            $links = [];
 
-        return response()->json([
+            foreach ($dom->getElementsByTagName('a') as $link) {
 
-            'success' => true,
+                $href = trim($link->getAttribute('href'));
+                $href = strtok($href, '#');
 
-            'existing' => false,
+                if (
+                    empty($href) ||
+                    str_starts_with($href, 'mailto:') ||
+                    str_starts_with($href, 'tel:') ||
+                    str_starts_with($href, 'sms:') ||
+                    str_starts_with($href, 'javascript:') ||
+                    str_starts_with($href, 'data:')
+                ) {
+                    continue;
+                }
 
-            'scan_id' => $scan->id
-        ]);
+                // CONVERSION DES URL RELATIVES
+                if (!str_starts_with($href, 'http')) {
+                    if (str_starts_with($href, '/')) {
+                        $href = rtrim($baseUrl, '/') . $href;
 
+                    } else {
+                        $href =
+                            rtrim($baseUrl, '/') .
+                            '/' .
+                            ltrim($href, '/');
+                    }
+                }
 
-    } catch (\Exception $e) {
+                $href = strtok($href, '#');
+                $href = rtrim($href, '/');
 
-        return response()->json([
+                // EXTENSIONS IGNORÉES
+                $extension = strtolower(
+                    pathinfo(
+                        parse_url($href, PHP_URL_PATH),
+                        PATHINFO_EXTENSION
+                    )
+                );
 
-            'success' => false,
+                $ignoredExtensions = [
+                    'jpg',
+                    'jpeg',
+                    'png',
+                    'gif',
+                    'svg',
+                    'webp',
+                    'css',
+                    'js',
+                    'ico',
+                    'pdf',
+                    'zip',
+                    'mp4'
+                ];
 
-            'message' => $e->getMessage()
+                if (in_array($extension, $ignoredExtensions)) {
+                    continue;
+                }
 
-        ], 400);
+                // GARDER UNIQUEMENT LE MÊME DOMAINE
+                $newHost = parse_url($href, PHP_URL_HOST);
+
+                $cleanNewHost = str_replace(
+                    'www.',
+                    '',
+                    strtolower($newHost)
+                );
+
+                if ($cleanNewHost != $cleanHost) {
+                    continue;
+                }
+                $links[] = $href;
+            }
+
+            $links = array_values(
+                array_unique($links)
+            );
+
+            // CRÉATION DU SCAN EN BDD
+            $scan = UserScan::create([
+                'user_id' => auth()->check() ? auth()->id() : null,
+                'website' => $url,
+                'base_url' => $baseUrl,
+                'host' => $host,
+                'to_visit' => $links,
+                'visited' => [],
+                'broken_links' => [],
+                'indexed' => 0,
+                'broken' => 0,
+                'skipped' => 0,
+                'finished' => false,
+            ]);
+
+            // STOCKER L'ID DU SCAN DANS LA SESSION
+            session([
+                'user_scan_id' => $scan->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'existing' => false,
+                'scan_id' => $scan->id
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
     }
-}
-
-
 
     public function scanStep(Request $request)
     {
@@ -374,11 +292,7 @@ public function startScan(Request $request)
         $baseUrl = $scan->base_url;
         $host = $scan->host;
 
-
-        // ==========================================
         // FIN DU SCAN
-        // ==========================================
-
         if (empty($toVisit)) {
 
             $scan->update([
@@ -401,20 +315,15 @@ public function startScan(Request $request)
         }
 
         // PRENDRE LE PROCHAIN LIEN
-
         $currentLink = array_shift($toVisit);
 
         \Log::info('SCAN URL : ' . $currentLink);
 
-
         if (in_array($currentLink, $visited)) {
 
             $skipped++;
-
         } else {
-
             $visited[] = $currentLink;
-
             try {
 
                 $response = Http::timeout(30)
@@ -429,11 +338,8 @@ public function startScan(Request $request)
                         'Accept-Language' => 'en-US,en;q=0.9',
                     ])
                     ->get($currentLink);
-
                 $status = $response->status();
-
             } catch (\Exception $e) {
-
                 \Log::error(
                     'SCAN ERROR [' . $currentLink . '] : ' . $e->getMessage()
                 );
@@ -442,11 +348,7 @@ public function startScan(Request $request)
                 $response = null;
             }
 
-
-            // ==========================================
             // LIEN VALIDE
-            // ==========================================
-
             if ($status >= 200 && $status < 400) {
 
                 $indexed++;
@@ -459,14 +361,10 @@ public function startScan(Request $request)
                     $dom->loadHTML($response->body());
                     libxml_clear_errors();
 
-
                     foreach ($dom->getElementsByTagName('a') as $link) {
-
                         $href = trim($link->getAttribute('href'));
-
                         $href = strtok($href, '#');
                         $href = rtrim($href, '/');
-
 
                         if (
                             empty($href) ||
@@ -481,22 +379,15 @@ public function startScan(Request $request)
 
 
                         if (!str_starts_with($href, 'http')) {
-
                             if (str_starts_with($href, '/')) {
-
                                 $href = rtrim($baseUrl, '/') . $href;
-
                             } else {
-
                                 $href = rtrim($baseUrl, '/') . '/' . ltrim($href, '/');
                             }
                         }
 
-
                         if (str_starts_with($href, 'http')) {
-
                             $newHost = parse_url($href, PHP_URL_HOST);
-
                             $cleanHost = str_replace(
                                 'www.',
                                 '',
@@ -509,7 +400,6 @@ public function startScan(Request $request)
                                 strtolower($newHost)
                             );
 
-
                             if (
                                 $cleanNewHost == $cleanHost &&
                                 !in_array($href, $visited) &&
@@ -520,14 +410,8 @@ public function startScan(Request $request)
                         }
                     }
                 }
-
-
             } else {
-
-                // ==========================================
                 // LIEN CASSÉ
-                // ==========================================
-
                 if ($status >= 400 || $status == 0) {
 
                     if (
@@ -536,7 +420,6 @@ public function startScan(Request $request)
                             array_column($brokenLinks, 'url')
                         )
                     ) {
-
                         $broken++;
 
                         $brokenLinks[] = [
@@ -547,25 +430,17 @@ public function startScan(Request $request)
                 }
             }
         }
-
-
-        // ==========================================
         // CALCUL PROGRESSION
-        // ==========================================
 
         $totalProcessed = count($visited);
         $totalRemaining = count($toVisit);
 
-
         if (($totalProcessed + $totalRemaining) > 0) {
-
             $progress = intval(
                 ($totalProcessed /
                 ($totalProcessed + $totalRemaining)) * 100
             );
-
         } else {
-
             $progress = 100;
         }
 
@@ -579,7 +454,6 @@ public function startScan(Request $request)
             'skipped' => $skipped,
             'finished' => false,
         ]);
-
 
         return response()->json([
             'finished' => false,

@@ -22,12 +22,9 @@ class AdminAuthController extends Controller
 
 
         if (Auth::guard('admin')->attempt($credentials)) {
-
             $request->session()->regenerate();
-
             return redirect()->route('admin.dashboard');
         }
-
 
         return back()->withErrors([
             'email' => 'Les identifiants sont incorrects.',
@@ -38,9 +35,7 @@ class AdminAuthController extends Controller
     public function logout(Request $request)
     {
         Auth::guard('admin')->logout();
-
         $request->session()->regenerateToken();
-
         return redirect()->route('admin.login');
     }
 }

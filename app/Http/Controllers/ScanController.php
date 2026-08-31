@@ -40,7 +40,6 @@ class ScanController extends Controller
                 ->get($url);
 
             if (!$response->successful()) {
-
              return response()->json([
                'success' => false,
                'status' => $response->status(),
@@ -50,7 +49,6 @@ class ScanController extends Controller
 
 
             $dom = new DOMDocument();
-
             libxml_use_internal_errors(true);
             $dom->loadHTML($response->body());
             libxml_clear_errors();
@@ -58,9 +56,7 @@ class ScanController extends Controller
             $links = [];
 
             foreach ($dom->getElementsByTagName('a') as $link) {
-
                $href = trim($link->getAttribute('href'));
-
                 $href = strtok($href, '#');
 
                 if (
@@ -75,13 +71,10 @@ class ScanController extends Controller
                 }
 
                 if (!str_starts_with($href, 'http')) {
-
                     if (str_starts_with($href, '/')) {
-
                         $href = rtrim($baseUrl, '/') . $href;
 
                     } else {
-
                         $href = rtrim($baseUrl, '/') . '/' . ltrim($href, '/');
                     }
                 }
@@ -89,16 +82,13 @@ class ScanController extends Controller
                 $href = strtok($href, '#');
                 $href = rtrim($href, '/');
 
-
                 // Ignorer fichiers
                 $extension = strtolower(pathinfo(parse_url($href, PHP_URL_PATH), PATHINFO_EXTENSION));
-
                 $ignoredExtensions = [
                     'jpg','jpeg','png','gif',
                     'svg','webp','css',
                     'js','ico','pdf','zip','mp4'
                 ];
-
 
                 if(in_array($extension,$ignoredExtensions)){
                     continue;
@@ -165,7 +155,6 @@ class ScanController extends Controller
          $host = $scan->host;
 
         if (empty($toVisit)) {
-
             $scan->broken_links = json_encode($brokenLinks);
             $scan->indexed = $indexed;
             $scan->broken = $broken;
@@ -228,7 +217,6 @@ class ScanController extends Controller
                 foreach ($dom->getElementsByTagName('a') as $link) {
 
                     $href = trim($link->getAttribute('href'));
-
                     $href = strtok($href, '#');
                     $href = rtrim($href,'/');
 
@@ -244,21 +232,16 @@ class ScanController extends Controller
                     }
 
                     if (!str_starts_with($href, 'http')) {
-
                         if (str_starts_with($href, '/')) {
-
                             $href = rtrim($baseUrl, '/') . $href;
 
                         } else {
-
                             $href = rtrim($baseUrl, '/') . '/' . ltrim($href, '/');
                         }
                     }   
 
                     if (str_starts_with($href, 'http')) {
-
                         $newHost = parse_url($href, PHP_URL_HOST);
-
                         $cleanHost = str_replace('www.', '', strtolower($host));
                         $cleanNewHost = str_replace('www.', '', strtolower($newHost));
 
@@ -274,7 +257,6 @@ class ScanController extends Controller
             }
 
         } else {
-
             if ($status >= 400 || $status == 0) {
                 if(!in_array($currentLink, array_column($brokenLinks,'url'))){
                     $broken++;
@@ -319,74 +301,61 @@ class ScanController extends Controller
    
 
    public function checkUrl(Request $request)
-{
-    $url = $request->url;
+    {
+        $url = $request->url;
 
-    $baseUrl = parse_url($url, PHP_URL_SCHEME) . '://' .
-               parse_url($url, PHP_URL_HOST);
+        $baseUrl = parse_url($url, PHP_URL_SCHEME) . '://' .
+                parse_url($url, PHP_URL_HOST);
 
-    $indexed = 0;
-    $broken = 0;
-    $skipped = 0;           
-    try {
+        $indexed = 0;
+        $broken = 0;
+        $skipped = 0;           
+        try {
 
-        $response = Http::timeout(20)
-            ->withHeaders([
-                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
-                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language' => 'en-US,en;q=0.9',
-            ])
-            ->get($url);
+            $response = Http::timeout(20)
+                ->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language' => 'en-US,en;q=0.9',
+                ])
+                ->get($url);
 
-        if (!$response->successful()) {
-           return response()->json([
-                'success' => false
-            ]);
-        }
-
-        $dom = new DOMDocument();
-
-        libxml_use_internal_errors(true);
-        $dom->loadHTML($response->body());
-        libxml_clear_errors();
-
-        foreach ($dom->getElementsByTagName('a') as $link) {
-
-            $href = trim($link->getAttribute('href'));
-
-            if (empty($href)) {
-                continue;
+            if (!$response->successful()) {
+            return response()->json([
+                    'success' => false
+                ]);
             }
 
-            if (
-                str_starts_with($href, '#') ||
-                str_starts_with($href, 'mailto:') ||
-                str_starts_with($href, 'javascript:')
-            ) {
-                $skipped++;
-                continue;
-            }
+            $dom = new DOMDocument();
 
-            if (!str_starts_with($href, 'http')) {
-                $href = rtrim($baseUrl, '/') . '/' . ltrim($href, '/');
-            }
+            libxml_use_internal_errors(true);
+            $dom->loadHTML($response->body());
+            libxml_clear_errors();
 
-            try {
+            foreach ($dom->getElementsByTagName('a') as $link) {
 
-                $linkResponse = Http::timeout(10)
-                    ->withoutVerifying()
-                    ->withOptions([
-                        'allow_redirects' => true,
-                    ])
-                    ->withHeaders([
-                        'User-Agent' => 'Mozilla/5.0'
-                    ])
-                    ->head($href);
+                $href = trim($link->getAttribute('href'));
 
-                // Si HEAD n'est pas autorisé, on utilise GET
-                if ($linkResponse->status() == 405) {
+                if (empty($href)) {
+                    continue;
+                }
 
-                   $linkResponse = Http::timeout(10)
+                if (
+                    str_starts_with($href, '#') ||
+                    str_starts_with($href, 'mailto:') ||
+                    str_starts_with($href, 'javascript:')
+                ) {
+                    $skipped++;
+                    continue;
+                }
+
+                if (!str_starts_with($href, 'http')) {
+                    $href = rtrim($baseUrl, '/') . '/' . ltrim($href, '/');
+                }
+
+                try {
+
+                    $linkResponse = Http::timeout(10)
                         ->withoutVerifying()
                         ->withOptions([
                             'allow_redirects' => true,
@@ -394,39 +363,52 @@ class ScanController extends Controller
                         ->withHeaders([
                             'User-Agent' => 'Mozilla/5.0'
                         ])
-                        ->get($href);
-                }
+                        ->head($href);
 
-                $status = $linkResponse->status();
+                    // Si HEAD n'est pas autorisé, on utilise GET
+                    if ($linkResponse->status() == 405) {
 
-                $indexed++;
+                    $linkResponse = Http::timeout(10)
+                            ->withoutVerifying()
+                            ->withOptions([
+                                'allow_redirects' => true,
+                            ])
+                            ->withHeaders([
+                                'User-Agent' => 'Mozilla/5.0'
+                            ])
+                            ->get($href);
+                    }
 
-                if ($status >= 400) {
+                    $status = $linkResponse->status();
+
+                    $indexed++;
+
+                    if ($status >= 400) {
+                        $broken++;
+                    }
+
+                } catch (\Exception $e) {
+
+                    $indexed++;
                     $broken++;
                 }
-
-            } catch (\Exception $e) {
-
-                $indexed++;
-                $broken++;
             }
+            return response()->json([
+                'success' => true,
+                'indexed' => $indexed,
+                'broken' => $broken,
+                'skipped' => $skipped
+            ]);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
         }
-        return response()->json([
-            'success' => true,
-            'indexed' => $indexed,
-            'broken' => $broken,
-            'skipped' => $skipped
-        ]);
 
-    } catch (\Exception $e) {
-
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage()
-        ]);
     }
-
-}
     
     
     public function result(Request $request){         

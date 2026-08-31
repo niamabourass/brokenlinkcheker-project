@@ -46,6 +46,7 @@ class ScanTest extends TestCase
         $response->assertSessionHasErrors('url');
     }
 
+
     //teste util peut acceder a son propre résultat
     public function test_user_can_access_his_own_scan_result(): void
     {
@@ -94,7 +95,6 @@ class ScanTest extends TestCase
             'skipped' => 2,
             'finished' => true,
         ]);
-
         $response = $this->actingAs($otherUser)
             ->withSession([
                 'user_scan_id' => $scan->id,
@@ -103,17 +103,16 @@ class ScanTest extends TestCase
 
         $response->assertStatus(403);
     }
+ 
 
     //verifie erreur 404 est renvoyé lrsq un scan n est présent en session
     public function test_scan_step_returns_404_without_scan_in_session(): void
     {
         $user = User::factory()->create();
-
         $response = $this->actingAs($user)
             ->postJson('/scan-step');
 
         $response->assertStatus(404);
-
         $response->assertJson([
             'error' => 'Scan utilisateur introuvable.',
         ]);
@@ -159,6 +158,7 @@ class ScanTest extends TestCase
             'finished' => true,
         ]);
     }
+
 
     //vérifie qun scan<24h est reutilise au lieu de rescanner
     public function test_recent_scan_is_reused_instead_of_starting_a_new_scan(): void
